@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Color Assigner</title>
+    <style>
+        body { font-family: sans-serif; padding: 1rem; max-width: 400px; margin: auto; }
+        .swatches { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 1rem; }
+        .swatch { width: 40px; height: 40px; border-radius: 5px; color: white; font-weight: bold;
+            display: flex; align-items: center; justify-content: center; }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+
+<h2>Choose Your Color</h2>
+<div class="swatches" id="colorPalette"></div>
+
+<input type="text" id="nameInput" placeholder="Enter your name" />
+<button id="submitBtn">Submit</button>
+
+<div id="resultArea"></div>
+
+<script>
+    const API_URL = "https://script.google.com/macros/s/AKfycbwYkE3HJwomHP7chDPjWMo80PdDx7ga6jRpCXcOUKaTgWGqddNiK9OkPqUvtn8IkuqvVg/exec";
+
+    const nameInput = document.getElementById('nameInput');
+    const submitBtn = document.getElementById('submitBtn');
+    const resultArea = document.getElementById('resultArea');
+    const colorPalette = document.getElementById('colorPalette');
+
+    const existing = JSON.parse(localStorage.getItem('assignedColor'));
+    if (existing) {
+        showResult(existing.name, existing.color, existing.hex, true);
+    } else {
+        fetch(API_URL,
+            {
+                // headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            })
+            .then(res => {
+                console.log(res);
+                return res.json();
+            })
+            .then(colors => {
+                colors.forEach(({Color, Hex}) => {
+                    const swatch = document.createElement('div');
+                    swatch.className = 'swatch';
+                    swatch.style.backgroundColor = Hex;
+                    swatch.textContent = Color[0];
+                    colorPalette.appendChild(swatch);
+                });
+            });
+    }
+
+        submitBtn.onclick = () => {
+            const name = nameInput.value.trim();
+            if (!name) return alert('Enter your name');
+
+            const formData = new FormData();
+            formData.append('name', name);
+            fetch(API_URL, {
+                method: 'POST',
+                // headers: {
+                //     'Content-Type': 'application/json',
+                // },
+                // headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body:formData,
+
+            })
+                .then(res => res.json())
+                .then(data => {
+                    const { formData, color, hex } = data;
+                    showResult(name, color, hex, false);
+                    localStorage.setItem('assignedColor', JSON.stringify(data));
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert("Something went wrong while assigning a color.");
+                });
+        };
+
+        function showResult(formData, color, hex, exists) {
+            resultArea.innerHTML = `
+        <h3>Thanks, ${formData}!</h3>
+        <p>Your assigned color is: <strong style="color: ${hex};">${color}</strong></p>
+        ${exists ? '<p>(Loaded from previous session)</p>' : ''}
+    `;
+            nameInput.classList.add('hidden');
+            submitBtn.classList.add('hidden');
+            colorPalette.classList.add('hidden');
+        }
+</script>
+
+</body>
+</html>
